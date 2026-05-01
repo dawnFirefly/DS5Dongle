@@ -104,7 +104,6 @@ target_link_libraries(ds5-bridge
         pico_btstack_cyw43
         tinyusb_device
         tinyusb_board
-        pico_bootsel_button
         wdl_resampler
         opus
 )

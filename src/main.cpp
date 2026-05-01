@@ -9,12 +9,14 @@
 #include "resample.h"
 #include "audio.h"
 #include "hardware/clocks.h"
+#include "hardware/sync.h"
+#include "hardware/structs/ioqspi.h"
+#include "hardware/structs/sio.h"
 #include "hardware/vreg.h"
 #include "hardware/watchdog.h"
 #include "pico/cyw43_arch.h"
-#include "pico/bootsel_button.h"
 
-// Pico SDK speciifically for waiting on conditions
+// Pico SDK specifically for waiting on conditions
 #include "pico/critical_section.h"
 
 int reportSeqCounter = 0;
@@ -136,13 +138,41 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
     }
 }
 
+// Read the BOOTSEL button by briefly floating the QSPI CS pin and observing
+// its state via the SIO hi GPIO input register. Must not run from flash.
+// Derived from https://github.com/raspberrypi/pico-examples/blob/master/picoboard/button/button.c
+static bool __no_inline_not_in_flash_func(get_bootsel_button)() {
+    const uint CS_PIN_INDEX = 1;
+
+    uint32_t flags = save_and_disable_interrupts();
+
+    hw_write_masked(&ioqspi_hw->io[CS_PIN_INDEX].ctrl,
+                    GPIO_OVERRIDE_LOW << IO_QSPI_GPIO_QSPI_SS_CTRL_OEOVER_LSB,
+                    IO_QSPI_GPIO_QSPI_SS_CTRL_OEOVER_BITS);
+
+    for (volatile int i = 0; i < 1000; ++i);
+
+#if PICO_RP2040
+    bool button_state = !(sio_hw->gpio_hi_in & (1u << 1));
+#else
+    bool button_state = !(sio_hw->gpio_hi_in & SIO_GPIO_HI_IN_QSPI_CSN_BITS);
+#endif
+
+    hw_write_masked(&ioqspi_hw->io[CS_PIN_INDEX].ctrl,
+                    GPIO_OVERRIDE_NORMAL << IO_QSPI_GPIO_QSPI_SS_CTRL_OEOVER_LSB,
+                    IO_QSPI_GPIO_QSPI_SS_CTRL_OEOVER_BITS);
+
+    restore_interrupts(flags);
+    return button_state;
+}
+
 // BOOTSEL button debounce state
 static uint32_t last_bootsel_press_us = 0;
 static bool last_bootsel_state = false;
 #define BOOTSEL_DEBOUNCE_US (300u * 1000u)  // 300 ms
 
 void bootsel_loop() {
-    bool pressed = (bool)pico_get_bootsel_button();
+    bool pressed = (bool)get_bootsel_button();
     uint32_t now = time_us_32();
 
     // Act only on rising edge after debounce period
