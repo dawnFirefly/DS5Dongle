@@ -12,6 +12,7 @@
 #include "hardware/vreg.h"
 #include "hardware/watchdog.h"
 #include "pico/cyw43_arch.h"
+#include "pico/bootsel_button.h"
 
 // Pico SDK speciifically for waiting on conditions
 #include "pico/critical_section.h"
@@ -135,6 +136,32 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t rep
     }
 }
 
+// BOOTSEL button debounce state
+static uint32_t last_bootsel_press_us = 0;
+static bool last_bootsel_state = false;
+#define BOOTSEL_DEBOUNCE_US (300u * 1000u)  // 300 ms
+
+void bootsel_loop() {
+    bool pressed = (bool)pico_get_bootsel_button();
+    uint32_t now = time_us_32();
+
+    // Act only on rising edge after debounce period
+    if (pressed && !last_bootsel_state &&
+        (now - last_bootsel_press_us >= BOOTSEL_DEBOUNCE_US)) {
+        last_bootsel_press_us = now;
+
+        if (bt_is_connected()) {
+            printf("[BOOTSEL] Connected — force-disconnecting controller\n");
+            bt_set_manual_disconnect();
+            bt_disconnect();
+        } else {
+            printf("[BOOTSEL] Disconnected — starting BT inquiry\n");
+            bt_start_inquiry();
+        }
+    }
+    last_bootsel_state = pressed;
+}
+
 int main() {
     vreg_set_voltage(VREG_VOLTAGE_1_20);
     sleep_ms(1000);
@@ -186,5 +213,7 @@ int main() {
         tud_task();
         audio_loop();
         interrupt_loop();
+        bootsel_loop();
+        bt_loop();
     }
 }
