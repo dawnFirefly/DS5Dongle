@@ -43,11 +43,8 @@ static queue<vector<uint8_t> > send_queue;
 static critical_section_t queue_lock;
 uint32_t inactive_time = 0; // 手柄长时间静默
 
-// BOOTSEL cooldown state
+// BOOTSEL manual-disconnect flag
 static bool manual_disconnect_pending = false;
-static uint32_t disconnect_time_us = 0;
-static bool reconnect_pending = false;
-#define RECONNECT_COOLDOWN_US (45u * 1000u * 1000u)
 
 void bt_register_data_callback(bt_data_callback_t callback) {
     bt_data_callback = callback;
@@ -58,7 +55,6 @@ bool bt_is_connected() {
 }
 
 void bt_start_inquiry() {
-    reconnect_pending = false;
     printf("[BT] Manual inquiry start\n");
     gap_inquiry_start(30);
 }
@@ -68,13 +64,6 @@ void bt_set_manual_disconnect() {
 }
 
 void bt_loop() {
-    if (reconnect_pending) {
-        if (time_us_32() - disconnect_time_us >= RECONNECT_COOLDOWN_US) {
-            reconnect_pending = false;
-            printf("[BT] Cooldown elapsed, starting inquiry\n");
-            gap_inquiry_start(30);
-        }
-    }
 }
 
 void bt_send_packet(uint8_t *data, uint16_t len) {
@@ -338,9 +327,8 @@ static void hci_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *p
                 manual_disconnect_pending = false;
                 printf("[HCI] Disconnected reason=0x%02X (manual), waiting for BOOTSEL press\n", reason);
             } else {
-                printf("[HCI] Disconnected reason=0x%02X, 45s cooldown before inquiry\n", reason);
-                reconnect_pending = true;
-                disconnect_time_us = time_us_32();
+                printf("[HCI] Disconnected reason=0x%02X, starting inquiry\n", reason);
+                gap_inquiry_start(30);
             }
             break;
         }
