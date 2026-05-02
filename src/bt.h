@@ -23,7 +23,6 @@ void bt_write(uint8_t* data,uint16_t len);
 bool bt_disconnect();
 bool bt_is_connected();
 void bt_start_inquiry();
-void bt_set_manual_disconnect();
 void bt_loop();
 std::vector<uint8_t> get_feature_data(uint8_t reportId,uint16_t len);
 void init_feature();

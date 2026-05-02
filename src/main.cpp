@@ -181,8 +181,7 @@ void bootsel_loop() {
         last_bootsel_press_us = now;
 
         if (bt_is_connected()) {
-            printf("[BOOTSEL] Connected — force-disconnecting controller\n");
-            bt_set_manual_disconnect();
+            printf("[BOOTSEL] Connected — force-disconnecting and starting inquiry\n");
             bt_disconnect();
         } else {
             printf("[BOOTSEL] Disconnected — starting BT inquiry\n");

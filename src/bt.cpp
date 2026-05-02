@@ -43,9 +43,6 @@ static queue<vector<uint8_t> > send_queue;
 static critical_section_t queue_lock;
 uint32_t inactive_time = 0; // 手柄长时间静默
 
-// BOOTSEL manual-disconnect flag
-static bool manual_disconnect_pending = false;
-
 void bt_register_data_callback(bt_data_callback_t callback) {
     bt_data_callback = callback;
 }
@@ -57,10 +54,6 @@ bool bt_is_connected() {
 void bt_start_inquiry() {
     printf("[BT] Manual inquiry start\n");
     gap_inquiry_start(30);
-}
-
-void bt_set_manual_disconnect() {
-    manual_disconnect_pending = true;
 }
 
 void bt_loop() {
@@ -323,13 +316,8 @@ static void hci_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *p
             hid_interrupt_cid = 0;
             feature_data.clear();
             cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, false);
-            if (manual_disconnect_pending) {
-                manual_disconnect_pending = false;
-                printf("[HCI] Disconnected reason=0x%02X (manual), waiting for BOOTSEL press\n", reason);
-            } else {
-                printf("[HCI] Disconnected reason=0x%02X, starting inquiry\n", reason);
-                gap_inquiry_start(30);
-            }
+            printf("[HCI] Disconnected reason=0x%02X, starting inquiry\n", reason);
+            gap_inquiry_start(30);
             break;
         }
     }
