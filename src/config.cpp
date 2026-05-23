@@ -56,13 +56,17 @@ void config_valid() {
         body->speaker_volume = 100;
         printf("[Config] Speaker Volume is invalid\n");
     }
-    if (body->headset_volume < 0 || body->speaker_volume > 127) {
+    if (body->headset_volume < 0 || body->headset_volume > 127) {
         body->headset_volume = 100;
         printf("[Config] Headset Volume is invalid\n");
     }
     if (body->sync_spk_headset_volume > 1) {
         body->sync_spk_headset_volume = 0;
         printf("[Config] sync_spk_headset_volume is invalid\n");
+    }
+    if (body->speaker_gain < 0 || body->speaker_gain > 7) {
+        body->speaker_gain = 2;
+        printf("[Config] speaker_gain is invalid\n");
     }
     if (body->inactive_time < 5 || body->inactive_time > 60) {
         body->inactive_time = 30;
@@ -136,6 +140,7 @@ void set_config(const uint8_t *new_config, const uint16_t len) {
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, true);
     }
     set_volume(config.body.speaker_volume,config.body.headset_volume);
+    set_gain(config.body.speaker_gain);
 }
 
 void set_config(const Config_body &new_config) {

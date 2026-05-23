@@ -2,6 +2,8 @@
 // Created by awalol on 2026/5/15.
 //
 
+#include "state_mgr.h"
+
 #include <cstddef>
 #include <cstring>
 
@@ -35,6 +37,8 @@ void state_init() {
     memcpy(&state, state_init_data, sizeof(state));
     state.VolumeSpeaker = get_config().speaker_volume;
     state.VolumeHeadphones = get_config().headset_volume;
+    set_volume(get_config().speaker_volume,get_config().headset_volume);
+    set_gain(get_config().speaker_gain);
 }
 
 void state_set(uint8_t *data, const uint8_t size) {
@@ -133,6 +137,9 @@ void state_update(const uint8_t *data, const uint8_t size) {
         kAudioControl2Offset,
         sizeof(uint8_t)
     );
+    if (update.AllowAudioControl2) {
+        get_config().speaker_gain = update.SpeakerCompPreGain;
+    }
     copy_if_allowed(
         update.AllowHapticLowPassFilter,
         kHapticLowPassFilterOffset,
@@ -174,4 +181,9 @@ void set_volume(const uint8_t value) {
 void set_volume(const uint8_t speaker,const uint8_t headset) {
     state.VolumeSpeaker = speaker;
     state.VolumeHeadphones = headset;
+}
+
+void set_gain(const uint8_t value) {
+    state.SpeakerCompPreGain = value;
+    state.BeamformingEnable = true;
 }
