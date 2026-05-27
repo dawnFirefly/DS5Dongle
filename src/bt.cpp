@@ -587,6 +587,12 @@ void set_feature_data(uint8_t reportId, uint8_t *data, uint16_t len) {
     }
 }
 
+void bt_power_off_controller() {
+    uint8_t bluetooth_control[47]{};
+    bluetooth_control[0] = 0x02; // DualSense Bluetooth control: 1=on, 2=off.
+    set_feature_data(0x08, bluetooth_control, sizeof(bluetooth_control));
+}
+
 void init_feature() {
     get_feature_data(0x09, 20);
     get_feature_data(0x20, 64);

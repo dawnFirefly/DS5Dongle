@@ -8,6 +8,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include "bt.h"
 #include "tusb.h"
 #include "device/dcd.h"
 #include "pico/sync.h"
@@ -75,6 +76,7 @@ void wake_init(void) {
 extern "C" void tud_suspend_cb(bool remote_wakeup_en) {
     WAKE_DBG("tud_suspend_cb remote_wakeup_en=%d prev_state=%s",
              (int)remote_wakeup_en, wake_state_name(state));
+    bt_power_off_controller();
     host_suspended = true;
     host_resumed_event = false;
     
