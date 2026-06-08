@@ -103,6 +103,8 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build build --target ds5-bridge
 ```
 
+Or download precompiled firmware from GitHub Actions.
+
 ### USB Wake Feature
 
 This feature is experimental. If you need this functionality, please check out the feat/usb-wake branch to compile it,
